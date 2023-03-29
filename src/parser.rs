@@ -10,6 +10,9 @@ pub enum PrimaryNoun {
 pub struct Verb(pub String);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Module(pub String);
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Noun {
     pub modifier: Vec<PrimaryNoun>,
     pub head: PrimaryNoun,
@@ -53,6 +56,14 @@ pub struct CondElem {
 // noun verb nouns_with_case* ("mal" noun verb nouns_with_case*)*
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Cond(pub Vec<CondElem>);
+
+// import = "lus" (module "'d")+ (
+//        ident | ident "ad" ident | ident "adit" ident ("," ident)+
+//      )
+pub struct Import {
+    module_path: Vec<Module>,
+    idents: Vec<String>,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ParseError {
@@ -268,5 +279,90 @@ impl<'a> State<'a> {
             verb,
             cond,
         })
+    }
+
+    // module = ident
+    pub fn parse_module(&mut self) -> Result<Module, ParseError> {
+        let next = self.next()?;
+        match next {
+            Token::NormalIdent { ident } => Ok(Module(ident)),
+            _ => Err(ParseError::UnexpectedToken {
+                expected: "（識別子）".to_string(),
+                actual: next.clone(),
+            }),
+        }
+    }
+
+    // import = "lus" (module "'d")+ (
+    //        ident | ident "ad" ident | ident "adit" ident ("," ident)+
+    //      )
+    pub fn parse_import(&mut self) -> Result<Import, ParseError> {
+        self.consume_or_die(Reserved::Lus, "lus")?;
+        let mut module_path = vec![self.parse_module()?];
+        self.consume_or_die(Reserved::ApostropheD, "'d")?;
+
+        // needs to read two tokens ahead.
+        // If `'d`, it's `module 'd`
+        // If period, it's `ident .`
+        // If `ad`, it's `ident ad`
+        // If `adit`, it's `ident adit`
+        loop {
+            match self.tokens {
+                [] | [Token::NormalIdent { .. }] => return Err(ParseError::EndOfFile),
+                [Token::NormalIdent { ident }, Token::Reserved(Reserved::ApostropheD), ..] => {
+                    module_path.push(Module(ident.to_string()));
+                    self.tokens = &self.tokens[2..];
+                    continue;
+                }
+                [Token::NormalIdent { ident }, Token::Reserved(Reserved::PunctuationPeriod), ..] => {
+                    let import = Import {
+                        module_path,
+                        idents: vec![ident.to_string()],
+                    };
+                    self.tokens = &self.tokens[1..];
+                    return Ok(import);
+                }
+                [Token::NormalIdent { ident }, Token::Reserved(Reserved::Ad), Token::NormalIdent { ident: ident2 }] =>
+                {
+                    let import = Import {
+                        module_path,
+                        idents: vec![ident.to_string(), ident2.to_string()],
+                    };
+                    self.tokens = &self.tokens[3..];
+                    return Ok(import);
+                }
+                [Token::NormalIdent { ident }, Token::Reserved(Reserved::Adit), Token::NormalIdent { ident: ident2 }, Token::Reserved(Reserved::PunctuationComma), Token::NormalIdent { ident: ident3 }, ..] =>
+                {
+                    let mut ident_list =
+                        vec![ident.to_string(), ident2.to_string(), ident3.to_string()];
+                    self.tokens = &self.tokens[5..];
+
+                    while let [Token::Reserved(Reserved::PunctuationComma), Token::NormalIdent { ident }, ..] =
+                        self.tokens
+                    {
+                        self.tokens = &self.tokens[2..];
+                        ident_list.push(ident.to_string());
+                    }
+
+                    return Ok(Import {
+                        module_path,
+                        idents: ident_list,
+                    });
+                }
+                [Token::NormalIdent { .. }, tok, ..] => {
+                    return Err(ParseError::UnexpectedToken {
+                        expected: "'d / . / ad / adit".to_string(),
+                        actual: tok.clone(),
+                    })
+                }
+
+                [tok, ..] => {
+                    return Err(ParseError::UnexpectedToken {
+                        expected: "（識別子）".to_string(),
+                        actual: tok.clone(),
+                    })
+                }
+            }
+        }
     }
 }
