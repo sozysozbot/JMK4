@@ -19,8 +19,7 @@ fn classify_char(c: char) -> CharKind {
 }
 
 pub fn tokenize(input: &str) -> Vec<String> {
-    let tokens = to_words(input);
-    tokens
+    to_words(input)
         .into_iter()
         .flat_map(|pre_token| split_off_reserved(&pre_token))
         .collect()
