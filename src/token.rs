@@ -24,7 +24,6 @@ pub enum Reserved {
 }
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-
 pub enum Preposition {
     El,
     Lerj,
@@ -82,4 +81,15 @@ pub fn tokenize(input: &str) -> Vec<Token> {
         .into_iter()
         .map(|s| Token::from(&s))
         .collect()
+}
+
+#[test]
+fn parsing_primary_noun() {
+    let tokens = tokenize("xakant");
+    assert_eq!(
+        tokens,
+        vec![Token::NormalIdent {
+            ident: "xakant".to_string()
+        }]
+    );
 }

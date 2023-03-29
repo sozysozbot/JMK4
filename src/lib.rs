@@ -1,7 +1,9 @@
 #![warn(clippy::pedantic, clippy::nursery)]
 
-use parser::parse_primary_noun;
+use parser::parse_noun;
 use token::Token;
+
+use crate::parser::{parse_primary_noun, Noun, PrimaryNoun};
 mod parser;
 mod token;
 mod tokenize;
@@ -11,5 +13,37 @@ pub fn foo(input: &str) -> Vec<Token> {
 }
 
 pub fn bar(tokens: &[Token]) {
-    parse_primary_noun(tokens);
+    parse_noun(tokens);
+}
+
+#[test]
+fn parsing_primary_noun() {
+    let tokens = token::tokenize("xakant");
+    println!("{tokens:?}");
+    let (noun, tokens) = parse_primary_noun(&tokens).unwrap();
+    assert_eq!(
+        noun,
+        PrimaryNoun::Ident {
+            ident: "xakant".to_string()
+        }
+    );
+    assert_eq!(tokens, vec![]);
+}
+
+#[test]
+fn parsing_noun() {
+    let tokens = token::tokenize("jerldir'd xakant");
+    let (noun, tokens) = parse_noun(&tokens).unwrap();
+    assert_eq!(
+        noun,
+        Noun {
+            modifier: vec![PrimaryNoun::Ident {
+                ident: "jerldir".to_string()
+            }],
+            head: PrimaryNoun::Ident {
+                ident: "xakant".to_string()
+            }
+        }
+    );
+    assert_eq!(tokens, vec![]);
 }
