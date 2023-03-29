@@ -14,6 +14,40 @@ pub enum ParseError {
 
 type ParserResult<'a, T> = Result<(T, &'a [Token]), ParseError>;
 
+pub struct ParserState<'a> {
+    tokens: &'a [Token],
+}
+
+impl<'a> ParserState<'a> {
+    pub fn is_empty(&self) -> bool {
+        self.tokens.is_empty()
+    }
+    pub fn new(tokens: &'a [Token]) -> Self {
+        Self { tokens }
+    }
+    pub fn parse_primary_noun(&mut self) -> Result<PrimaryNoun, ParseError> {
+        match self.tokens {
+            [] => Err(ParseError::EndOfFile),
+            [Token::NormalIdent { ident }, ..] => {
+                self.tokens = &self.tokens[1..];
+                Ok(PrimaryNoun::Ident {
+                    ident: ident.clone(),
+                })
+            }
+            [Token::StringLiteral { literal }, ..] => {
+                self.tokens = &self.tokens[1..];
+                Ok(PrimaryNoun::StringLiteral {
+                    literal: literal.clone(),
+                })
+            }
+            [tok, ..] => Err(ParseError::UnexpectedToken {
+                expected: "（識別子か文字列リテラル）".to_string(),
+                actual: tok.clone(),
+            }),
+        }
+    }
+}
+
 pub fn parse_primary_noun(tokens: &[Token]) -> ParserResult<PrimaryNoun> {
     match tokens {
         [] => Err(ParseError::EndOfFile),

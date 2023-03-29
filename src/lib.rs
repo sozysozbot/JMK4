@@ -3,7 +3,7 @@
 use parser::parse_noun;
 use token::Token;
 
-use crate::parser::{parse_primary_noun, Noun, PrimaryNoun};
+use crate::parser::{parse_primary_noun, Noun, ParserState, PrimaryNoun};
 mod parser;
 mod token;
 mod tokenize;
@@ -19,15 +19,16 @@ pub fn bar(tokens: &[Token]) {
 #[test]
 fn parsing_primary_noun() {
     let tokens = token::tokenize("xakant");
+    let mut parser_state = ParserState::new(&tokens);
     println!("{tokens:?}");
-    let (noun, tokens) = parse_primary_noun(&tokens).unwrap();
+    let noun = parser_state.parse_primary_noun().unwrap();
     assert_eq!(
         noun,
         PrimaryNoun::Ident {
             ident: "xakant".to_string()
         }
     );
-    assert_eq!(tokens, vec![]);
+    assert!(parser_state.is_empty());
 }
 
 #[test]
