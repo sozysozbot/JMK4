@@ -7,7 +7,7 @@ pub enum PrimaryNoun {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Verb(String);
+pub struct Verb(pub String);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Noun {
@@ -31,6 +31,23 @@ pub struct NounsWithCase {
 pub enum Sentence {
     VarDecl(Noun, Noun),
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct EventCond {
+    noun: Noun,
+    verb: Verb,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct CondElem {
+    pub noun: Noun,
+    pub verb: Verb,
+    pub nouns_with_case: Option<NounsWithCase>,
+}
+
+// noun verb nouns_with_case* ("mal" noun verb nouns_with_case*)*
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Cond(pub Vec<CondElem>);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ParseError {
@@ -154,7 +171,7 @@ impl<'a> State<'a> {
                     case: Case::ApostropheC,
                 }),
                 _ => Err(ParseError::UnexpectedToken {
-                    expected: "（'c）".to_string(),
+                    expected: "'c".to_string(),
                     actual: next,
                 }),
             }
@@ -164,18 +181,8 @@ impl<'a> State<'a> {
     // var_decl = noun "es" noun
     pub fn parse_var_decl(&mut self) -> Result<Sentence, ParseError> {
         let noun1 = self.parse_noun()?;
-        let next = self.next()?;
-        match next {
-            Token::Reserved(Reserved::Es) => {}
-            _ => {
-                return Err(ParseError::UnexpectedToken {
-                    expected: "（es）".to_string(),
-                    actual: next,
-                })
-            }
-        }
+        self.consume_or_die(Reserved::Es, "es")?;
         let noun2 = self.parse_noun()?;
-
         Ok(Sentence::VarDecl(noun1, noun2))
     }
 
@@ -189,5 +196,57 @@ impl<'a> State<'a> {
                 actual: next.clone(),
             }),
         }
+    }
+
+    pub fn consume_or_die(&mut self, reserved: Reserved, msg: &str) -> Result<(), ParseError> {
+        let next = self.next()?;
+        if next == Token::Reserved(reserved) {
+            Ok(())
+        } else {
+            Err(ParseError::UnexpectedToken {
+                expected: msg.to_string(),
+                actual: next,
+            })
+        }
+    }
+
+    // event_cond = noun "'st" verb "-il" "io"
+    pub fn parse_event_cond(&mut self) -> Result<EventCond, ParseError> {
+        let noun = self.parse_noun()?;
+        self.consume_or_die(Reserved::ApostropheSt, "'st")?;
+        let verb = self.parse_verb()?;
+        self.consume_or_die(Reserved::HyphenIl, "-il")?;
+        self.consume_or_die(Reserved::Io, "io")?;
+        Ok(EventCond { noun, verb })
+    }
+
+    pub fn parse_cond_elem(&mut self) -> Result<CondElem, ParseError> {
+        let noun = self.parse_noun()?;
+        let verb = self.parse_verb()?;
+        // When `felx`, `mal`, `.` comes, the parsing stops
+        let nouns_with_case = if let Some(Token::Reserved(
+            Reserved::Felx | Reserved::Mal | Reserved::PunctuationPeriod,
+        )) = self.peek()
+        {
+            None
+        } else {
+            let nouns_with_case = self.parse_nouns_with_case()?;
+            Some(nouns_with_case)
+        };
+        Ok(CondElem {
+            noun,
+            verb,
+            nouns_with_case,
+        })
+    }
+
+    // cond = noun verb nouns_with_case* ("mal" noun verb nouns_with_case*)*
+    pub fn parse_cond(&mut self) -> Result<Cond, ParseError> {
+        let mut cond_elems = vec![self.parse_cond_elem()?];
+        while let [Token::Reserved(Reserved::Mal), ..] = self.tokens {
+            self.tokens = &self.tokens[1..];
+            cond_elems.push(self.parse_cond_elem()?);
+        }
+        Ok(Cond(cond_elems))
     }
 }

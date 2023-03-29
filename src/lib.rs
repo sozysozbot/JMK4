@@ -3,7 +3,7 @@
 
 use parser::NounsWithCase;
 
-use crate::parser::{Noun, PrimaryNoun, Sentence, State};
+use crate::parser::{Cond, CondElem, Noun, PrimaryNoun, Sentence, State, Verb};
 mod parser;
 mod token;
 mod tokenize;
@@ -85,6 +85,38 @@ pub fn test_var_decl() {
     assert_eq!(
         sentence,
         Sentence::VarDecl(noun_from_ident("selsurle"), noun_from_ident("iu"))
+    );
+}
+
+pub fn test_cond() {
+    let tokens = token::tokenize("selsurle mol mal kernumesaxm'd pestavilersnelyo es_tydivexy mal kernumesaxm'd snelyo es_tydivexy");
+    let mut parser_state = State::new(&tokens);
+    let cond = parser_state.parse_cond().unwrap();
+    assert_eq!(
+        cond,
+        Cond(vec![
+            CondElem {
+                noun: noun_from_ident("selsurle"),
+                verb: Verb("mol".to_string()),
+                nouns_with_case: None,
+            },
+            CondElem {
+                noun: Noun {
+                    modifier: vec![primary_noun_from_ident("kernumesaxm")],
+                    head: primary_noun_from_ident("pestavilersnelyo")
+                },
+                verb: Verb("es_tydivexy".to_string()),
+                nouns_with_case: None,
+            },
+            CondElem {
+                noun: Noun {
+                    modifier: vec![primary_noun_from_ident("kernumesaxm")],
+                    head: primary_noun_from_ident("snelyo")
+                },
+                verb: Verb("es_tydivexy".to_string()),
+                nouns_with_case: None,
+            },
+        ])
     );
 }
 

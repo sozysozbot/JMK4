@@ -43,4 +43,4 @@ predicate_decl = noun_list "'st" verb "-o" ":" cond
 
 event_cond = noun "'st" verb "-il" "io"
 
-cond = noun verb nouns_with_case* ("mal" noun verb nouns_with_case*)
+cond = noun verb nouns_with_case* ("mal" noun verb nouns_with_case*)*
