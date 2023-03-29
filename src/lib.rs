@@ -1,22 +1,39 @@
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 enum CharKind {
-    AlphabetOrNumeral,
+    WordConstituent,
     Space,
     SimplePunctuation,
-    // PossiblyTokenDivider,
 }
 
 fn classify_char(c: char) -> CharKind {
     match c {
-        'a'..='z' | 'φ' | 'β' | 'ж' | '0'..='9' => CharKind::AlphabetOrNumeral,
+        'a'..='z' | 'φ' | 'β' | 'ж' | '0'..='9' | '\'' | '-' => CharKind::WordConstituent,
         c if c.is_whitespace() => CharKind::Space,
         '.' | ',' => CharKind::SimplePunctuation,
-        // '\'' | '-' => CharKind::PossiblyTokenDivider,
         _ => panic!("unknown character {c}"),
     }
 }
 
 pub fn tokenize(input: &str) -> Vec<String> {
+    let tokens = tokenize1(input);
+    tokens
+        .into_iter()
+        .flat_map(|pre_token| split_off_reserved(&pre_token))
+        .collect()
+}
+
+const RESERVED_ENDING: [&str; 6] = ["'d", "'c", "'st", "-il", "-o", "'i"];
+
+pub fn split_off_reserved(pre_token: &str) -> Vec<String> {
+    for ending in RESERVED_ENDING {
+        if let Some(remaining) = pre_token.strip_suffix(ending) {
+            return vec![remaining.to_string(), ending.to_string()];
+        }
+    }
+    vec![pre_token.to_string()]
+}
+
+pub fn tokenize1(input: &str) -> Vec<String> {
     #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
     enum State {
         ExpectingWordInitial,
@@ -31,11 +48,11 @@ pub fn tokenize(input: &str) -> Vec<String> {
         use CharKind::*;
         use State::*;
         match (classify_char(c), state) {
-            (AlphabetOrNumeral, ExpectingWordInitial) => {
+            (WordConstituent, ExpectingWordInitial) => {
                 partial_word.push(c);
                 state = State::WordInternal;
             }
-            (AlphabetOrNumeral, WordInternal) => {
+            (WordConstituent, WordInternal) => {
                 partial_word.push(c);
             }
             (Space, ExpectingWordInitial) => { /* nothing is needed */ }
@@ -76,5 +93,26 @@ mod tests {
             tokenize("laozia jerldir lerj 10 ad 10 el 168 ad 218."),
             vec!["laozia", "jerldir", "lerj", "10", "ad", "10", "el", "168", "ad", "218", "."]
         );
+    }
+
+    #[test]
+    fn case_ending() {
+        assert_eq!(
+            tokenize("kernumesaxm'st sides-il io elx shrlo is selsurle iu'c."),
+            vec![
+                "kernumesaxm",
+                "'st",
+                "sides",
+                "-il",
+                "io",
+                "elx",
+                "shrlo",
+                "is",
+                "selsurle",
+                "iu",
+                "'c",
+                "."
+            ]
+        )
     }
 }
