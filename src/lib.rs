@@ -3,7 +3,7 @@
 
 use parser::NounsWithCase;
 
-use crate::parser::{Noun, PrimaryNoun, State};
+use crate::parser::{Noun, PrimaryNoun, Sentence, State};
 mod parser;
 mod token;
 mod tokenize;
@@ -78,6 +78,16 @@ pub fn test_nouns_with_case() {
     );
 }
 
+pub fn test_var_decl() {
+    let tokens = token::tokenize("selsurle es iu.");
+    let mut parser_state = State::new(&tokens);
+    let sentence = parser_state.parse_var_decl().unwrap();
+    assert_eq!(
+        sentence,
+        Sentence::VarDecl(noun_from_ident("selsurle"), noun_from_ident("iu"))
+    );
+}
+
 #[test]
 fn parsing_primary_noun() {
     test_primary_noun();
@@ -96,4 +106,9 @@ fn parsing_noun_list() {
 #[test]
 fn parsing_nouns_with_case() {
     test_nouns_with_case();
+}
+
+#[test]
+fn parsing_var_decl() {
+    test_var_decl();
 }

@@ -25,6 +25,11 @@ pub struct NounsWithCase {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Sentence {
+    VarDecl(Noun, Noun),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ParseError {
     EndOfFile,
     UnexpectedToken { expected: String, actual: Token },
@@ -151,5 +156,22 @@ impl<'a> State<'a> {
                 }),
             }
         }
+    }
+
+    pub fn parse_var_decl(&mut self) -> Result<Sentence, ParseError> {
+        let noun1 = self.parse_noun()?;
+        let next = self.next()?;
+        match next {
+            Token::Reserved(Reserved::Es) => {}
+            _ => {
+                return Err(ParseError::UnexpectedToken {
+                    expected: "（es）".to_string(),
+                    actual: next,
+                })
+            }
+        }
+        let noun2 = self.parse_noun()?;
+
+        Ok(Sentence::VarDecl(noun1, noun2))
     }
 }
