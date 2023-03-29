@@ -53,6 +53,18 @@ pub struct CondElem {
     pub nouns_with_case: Option<NounsWithCase>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct NamedParameter {
+    pub modifiers: Vec<String>,
+    pub head: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct MeaElem {
+    named_parameter: NamedParameter,
+    noun_list: Vec<Noun>,
+}
+
 // noun verb nouns_with_case* ("mal" noun verb nouns_with_case*)*
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Cond(pub Vec<CondElem>);
@@ -64,6 +76,14 @@ pub struct Cond(pub Vec<CondElem>);
 pub struct Import {
     pub module_path: Vec<Module>,
     pub idents: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Procedure {
+    pub verb: Verb,
+    pub noun: Noun,
+    pub nouns_with_case_array: Vec<NounsWithCase>,
+    pub mea_clause: Option<Vec<MeaElem>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -79,6 +99,10 @@ pub struct State<'a> {
 impl<'a> State<'a> {
     pub const fn is_empty(&self) -> bool {
         self.tokens.is_empty()
+    }
+
+    pub const fn get_tokens(&self) -> &[Token] {
+        self.tokens
     }
 
     pub const fn new(tokens: &'a [Token]) -> Self {
@@ -205,14 +229,7 @@ impl<'a> State<'a> {
 
     // verb = ident
     pub fn parse_verb(&mut self) -> Result<Verb, ParseError> {
-        let next = self.next()?;
-        match next {
-            Token::NormalIdent { ident } => Ok(Verb(ident)),
-            _ => Err(ParseError::UnexpectedToken {
-                expected: "（識別子）".to_string(),
-                actual: next.clone(),
-            }),
-        }
+        Ok(Verb(self.parse_ident()?))
     }
 
     pub fn consume_or_die(&mut self, reserved: Reserved, msg: &str) -> Result<(), ParseError> {
@@ -284,9 +301,13 @@ impl<'a> State<'a> {
 
     // module = ident
     pub fn parse_module(&mut self) -> Result<Module, ParseError> {
+        Ok(Module(self.parse_ident()?))
+    }
+
+    pub fn parse_ident(&mut self) -> Result<String, ParseError> {
         let next = self.next()?;
         match next {
-            Token::NormalIdent { ident } => Ok(Module(ident)),
+            Token::NormalIdent { ident } => Ok(ident),
             _ => Err(ParseError::UnexpectedToken {
                 expected: "（識別子）".to_string(),
                 actual: next.clone(),
@@ -365,5 +386,66 @@ impl<'a> State<'a> {
                 }
             }
         }
+    }
+
+    // (ident "'d")* ident "es" noun_list
+    pub fn parse_mea_elem(&mut self) -> Result<MeaElem, ParseError> {
+        let mut idents = vec![self.parse_ident()?];
+        while let [Token::Reserved(Reserved::ApostropheD), ..] = self.tokens {
+            self.tokens = &self.tokens[1..];
+            idents.push(self.parse_ident()?);
+        }
+        self.consume_or_die(Reserved::Es, "es")?;
+        let noun_list = self.parse_noun_list()?;
+        let head = idents.pop().unwrap();
+        let named_parameter = NamedParameter {
+            modifiers: idents,
+            head,
+        };
+        Ok(MeaElem {
+            named_parameter,
+            noun_list,
+        })
+    }
+
+    // mea_clause = "mea" (ident "'d")* ident "es" noun_list
+    //              ("mal" (ident "'d")* ident "es" noun_list)*
+    pub fn parse_mea_clause(&mut self) -> Result<Vec<MeaElem>, ParseError> {
+        self.consume_or_die(Reserved::Mea, "mea")?;
+        let mut mea_clause = vec![self.parse_mea_elem()?];
+        while let [Token::Reserved(Reserved::Mal), ..] = self.tokens {
+            self.tokens = &self.tokens[1..];
+            mea_clause.push(self.parse_mea_elem()?);
+        }
+        Ok(mea_clause)
+    }
+
+    // procedure = verb noun nouns_with_case* mea_clause?
+    pub fn parse_procedure(&mut self) -> Result<Procedure, ParseError> {
+        let verb = self.parse_verb()?;
+        let noun = self.parse_noun()?;
+
+        let mut nouns_with_case_array = vec![];
+        loop {
+            if let Some(Token::Reserved(Reserved::Mea | Reserved::PunctuationPeriod)) = self.peek()
+            {
+                break;
+            }
+            nouns_with_case_array.push(self.parse_nouns_with_case()?);
+        }
+
+        let mea_clause = if self.peek() == Some(Token::Reserved(Reserved::Mea)) {
+            let mea_clause = self.parse_mea_clause()?;
+            Some(mea_clause)
+        } else {
+            None
+        };
+
+        Ok(Procedure {
+            verb,
+            noun,
+            nouns_with_case_array,
+            mea_clause,
+        })
     }
 }

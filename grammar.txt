@@ -28,8 +28,7 @@ sentence = procedure
 verb = ident
 mea_clause = "mea" (ident "'d")* ident "es" noun_list
             ("mal" (ident "'d")* ident "es" noun_list)*
-procedure = verb noun nouns_with_case* mea_clause
-          | verb nouns_with_case* noun "'i" nouns_with_case* mea_clause
+procedure = verb noun nouns_with_case* mea_clause?
 
 # ここだけ 'd と ad/adit の優先順位が逆
 module = ident

@@ -3,7 +3,12 @@
 
 use parser::NounsWithCase;
 
-use crate::parser::{Cond, CondElem, Import, Module, Noun, PrimaryNoun, Sentence, State, Verb};
+use crate::{
+    parser::{
+        Case, Cond, CondElem, Import, Module, Noun, PrimaryNoun, Procedure, Sentence, State, Verb,
+    },
+    token::{Preposition, Reserved, Token},
+};
 mod parser;
 mod token;
 mod tokenize;
@@ -84,6 +89,10 @@ pub fn test_var_decl() {
     let mut parser_state = State::new(&tokens);
     let sentence = parser_state.parse_var_decl().unwrap();
     assert_eq!(
+        parser_state.get_tokens(),
+        vec![Token::Reserved(Reserved::PunctuationPeriod)]
+    );
+    assert_eq!(
         sentence,
         Sentence::VarDecl(noun_from_ident("selsurle"), noun_from_ident("iu"))
     );
@@ -93,6 +102,7 @@ pub fn test_cond() {
     let tokens = token::tokenize("selsurle mol mal kernumesaxm'd pestavilersnelyo es_tydivexy mal kernumesaxm'd snelyo es_tydivexy");
     let mut parser_state = State::new(&tokens);
     let cond = parser_state.parse_cond().unwrap();
+    assert!(tokens.is_empty());
     assert_eq!(
         cond,
         Cond(vec![
@@ -126,6 +136,10 @@ pub fn test_import() {
     let mut parser_state = State::new(&tokens);
     let import = parser_state.parse_import().unwrap();
     assert_eq!(
+        parser_state.get_tokens(),
+        vec![Token::Reserved(Reserved::PunctuationPeriod)]
+    );
+    assert_eq!(
         import,
         Import {
             module_path: vec![Module("jmk4".to_string())],
@@ -144,6 +158,10 @@ pub fn test_predicate_decl() {
     );
     let mut parser_state = State::new(&tokens);
     let predicate = parser_state.parse_predicate_decl().unwrap();
+    assert_eq!(
+        parser_state.get_tokens(),
+        vec![Token::Reserved(Reserved::PunctuationPeriod)]
+    );
     assert_eq!(
         predicate,
         Sentence::PredicateDecl {
@@ -167,6 +185,34 @@ pub fn test_predicate_decl() {
                     })
                 }
             ])
+        }
+    );
+}
+
+pub fn test_procedure() {
+    let tokens = token::tokenize("laozia jerldir lerj 10 ad 10 el 168 ad 218.");
+    let mut parser_state = State::new(&tokens);
+    let procedure = parser_state.parse_procedure().unwrap();
+    assert_eq!(
+        parser_state.get_tokens(),
+        vec![Token::Reserved(Reserved::PunctuationPeriod)]
+    );
+    assert_eq!(
+        procedure,
+        Procedure {
+            verb: Verb("laozia".to_string()),
+            noun: noun_from_ident("jerldir"),
+            nouns_with_case_array: vec![
+                NounsWithCase {
+                    nouns: vec![noun_from_ident("10"), noun_from_ident("10")],
+                    case: Case::Preposition(Preposition::Lerj)
+                },
+                NounsWithCase {
+                    nouns: vec![noun_from_ident("168"), noun_from_ident("218")],
+                    case: Case::Preposition(Preposition::El)
+                }
+            ],
+            mea_clause: None
         }
     );
 }
@@ -199,4 +245,9 @@ fn parsing_var_decl() {
 #[test]
 fn parsing_import() {
     test_import();
+}
+
+#[test]
+fn parsing_procedure() {
+    test_procedure();
 }
