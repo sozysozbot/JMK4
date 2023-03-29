@@ -7,6 +7,9 @@ pub enum PrimaryNoun {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Verb(String);
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Noun {
     pub modifier: Vec<PrimaryNoun>,
     pub head: PrimaryNoun,
@@ -158,6 +161,7 @@ impl<'a> State<'a> {
         }
     }
 
+    // var_decl = noun "es" noun
     pub fn parse_var_decl(&mut self) -> Result<Sentence, ParseError> {
         let noun1 = self.parse_noun()?;
         let next = self.next()?;
@@ -173,5 +177,17 @@ impl<'a> State<'a> {
         let noun2 = self.parse_noun()?;
 
         Ok(Sentence::VarDecl(noun1, noun2))
+    }
+
+    // verb = ident
+    pub fn parse_verb(&mut self) -> Result<Verb, ParseError> {
+        let next = self.next()?;
+        match next {
+            Token::NormalIdent { ident } => Ok(Verb(ident)),
+            _ => Err(ParseError::UnexpectedToken {
+                expected: "（識別子）".to_string(),
+                actual: next.clone(),
+            }),
+        }
     }
 }
