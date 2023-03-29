@@ -182,7 +182,7 @@ mod tests {
     #[allow(clippy::too_many_lines)]
     fn selsurle() {
         assert_eq!(
-            tokenize(include_str!("../selsurle.txt")),
+            tokenize(include_str!("../selsurle.jmk4")),
             vec![
                 "lus",
                 "jmk4",
