@@ -30,6 +30,11 @@ pub struct NounsWithCase {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Sentence {
     VarDecl(Noun, Noun),
+    PredicateDecl {
+        noun_list: Vec<Noun>,
+        verb: Verb,
+        cond: Cond,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -248,5 +253,20 @@ impl<'a> State<'a> {
             cond_elems.push(self.parse_cond_elem()?);
         }
         Ok(Cond(cond_elems))
+    }
+
+    // predicate_decl = noun_list "'st" verb "-o" ":" cond
+    pub fn parse_predicate_decl(&mut self) -> Result<Sentence, ParseError> {
+        let noun_list = self.parse_noun_list()?;
+        self.consume_or_die(Reserved::ApostropheSt, "'st")?;
+        let verb = self.parse_verb()?;
+        self.consume_or_die(Reserved::HyphenO, "-o")?;
+        self.consume_or_die(Reserved::PunctuationColon, ":")?;
+        let cond = self.parse_cond()?;
+        Ok(Sentence::PredicateDecl {
+            noun_list,
+            verb,
+            cond,
+        })
     }
 }
