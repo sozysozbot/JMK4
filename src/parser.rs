@@ -1,4 +1,4 @@
-use crate::token::{Reserved, Token};
+use crate::token::{Preposition, Reserved, Token};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PrimaryNoun {
@@ -10,6 +10,18 @@ pub enum PrimaryNoun {
 pub struct Noun {
     pub modifier: Vec<PrimaryNoun>,
     pub head: PrimaryNoun,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Case {
+    Preposition(Preposition),
+    ApostropheC,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct NounsWithCase {
+    pub nouns: Vec<Noun>,
+    pub case: Case,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -112,6 +124,32 @@ impl<'a> State<'a> {
                 Ok(nouns)
             }
             _ => Ok(nouns),
+        }
+    }
+
+    // preposition = "el" | "lerj" | "fal" | "cecioj"
+    // nouns_with_case = preposition noun_list | noun_list "'c"
+    pub fn parse_nouns_with_case(&mut self) -> Result<NounsWithCase, ParseError> {
+        if let Some(Token::Reserved(Reserved::Preposition(p))) = self.peek() {
+            self.next()?;
+            let nouns = self.parse_noun_list()?;
+            Ok(NounsWithCase {
+                nouns,
+                case: Case::Preposition(p),
+            })
+        } else {
+            let nouns = self.parse_noun_list()?;
+            let next = self.next()?;
+            match next {
+                Token::Reserved(Reserved::ApostropheC) => Ok(NounsWithCase {
+                    nouns,
+                    case: Case::ApostropheC,
+                }),
+                _ => Err(ParseError::UnexpectedToken {
+                    expected: "（'c）".to_string(),
+                    actual: next,
+                }),
+            }
         }
     }
 }
