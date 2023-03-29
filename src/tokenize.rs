@@ -52,8 +52,10 @@ pub fn to_words(input: &str) -> Vec<String> {
     let mut partial_word = String::new();
 
     for c in input.chars() {
-        use CharKind::*;
-        use State::*;
+        use CharKind::{
+            EndsStringLiteral, SimplePunctuation, Space, StartsStringLiteral, WordConstituent,
+        };
+        use State::{ExpectingWordInitial, StringLiteralInternal, WordInternal};
         match (classify_char(c), state) {
             (WordConstituent, ExpectingWordInitial) => {
                 partial_word.push(c);
@@ -141,7 +143,7 @@ mod tests {
                 "'c",
                 "."
             ]
-        )
+        );
     }
 
     #[test]
@@ -149,7 +151,7 @@ mod tests {
         assert_eq!(
             tokenize("is jerldir'd xakant <selsurle>'c."),
             vec!["is", "jerldir", "'d", "xakant", "<selsurle>", "'c", "."]
-        )
+        );
     }
 
     #[test]
@@ -157,7 +159,7 @@ mod tests {
         assert_eq!(
             tokenize("is jerldir'd xakant<selsurle>'c."),
             vec!["is", "jerldir", "'d", "xakant", "<selsurle>", "'c", "."]
-        )
+        );
     }
 
     #[test]
@@ -165,7 +167,7 @@ mod tests {
         assert_eq!(
             tokenize("is jerldir'd xakant<selsurle> 'c."),
             vec!["is", "jerldir", "'d", "xakant", "<selsurle>", "'c", "."]
-        )
+        );
     }
 
     #[test]
@@ -173,6 +175,6 @@ mod tests {
         assert_eq!(
             tokenize("is jerldir'd xakant <selsurle> 'c."),
             vec!["is", "jerldir", "'d", "xakant", "<selsurle>", "'c", "."]
-        )
+        );
     }
 }
