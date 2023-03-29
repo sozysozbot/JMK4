@@ -41,8 +41,14 @@ impl<'a> State<'a> {
         }
     }
 
-    ///
-    /// `primary_noun = ident | "<" character* ">"` 
+    pub fn peek(&mut self) -> Option<Token> {
+        match self.tokens {
+            [] => None,
+            [tok, ..] => Some(tok.clone()),
+        }
+    }
+
+    // primary_noun = ident | "<" character* ">"
     #[allow(clippy::match_wildcard_for_single_variants)]
     pub fn parse_primary_noun(&mut self) -> Result<PrimaryNoun, ParseError> {
         let next = self.next()?;
@@ -56,8 +62,7 @@ impl<'a> State<'a> {
         }
     }
 
-    ///
-    /// `noun = (primary_noun "'d")* primary_noun`
+    // noun = (primary_noun "'d")* primary_noun
     pub fn parse_noun(&mut self) -> Result<Noun, ParseError> {
         let mut pns = vec![];
         pns.push(self.parse_primary_noun()?);
@@ -70,5 +75,43 @@ impl<'a> State<'a> {
             modifier: pns,
             head,
         })
+    }
+
+    // noun_list = noun
+    //   | noun "ad" noun
+    //   | noun "adit" noun ("," noun)+
+    pub fn parse_noun_list(&mut self) -> Result<Vec<Noun>, ParseError> {
+        let mut nouns = vec![];
+        nouns.push(self.parse_noun()?);
+        match self.peek() {
+            Some(Token::Reserved(Reserved::Ad)) => {
+                // noun "ad" noun
+                self.next()?;
+                nouns.push(self.parse_noun()?);
+                Ok(nouns)
+            }
+            Some(Token::Reserved(Reserved::Adit)) => {
+                // noun "adit" noun ("," noun)+
+                self.next()?;
+                nouns.push(self.parse_noun()?);
+
+                let expect_comma = self.next()?;
+                if expect_comma != Token::Reserved(Reserved::PunctuationComma) {
+                    return Err(ParseError::UnexpectedToken {
+                        expected: "（カンマ）".to_string(),
+                        actual: expect_comma,
+                    });
+                }
+                nouns.push(self.parse_noun()?);
+
+                while let [Token::Reserved(Reserved::PunctuationComma), ..] = self.tokens {
+                    self.tokens = &self.tokens[1..];
+                    nouns.push(self.parse_noun()?);
+                }
+
+                Ok(nouns)
+            }
+            _ => Ok(nouns),
+        }
     }
 }
