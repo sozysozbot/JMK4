@@ -1,0 +1,46 @@
+#########
+# nouns 
+#########
+primary_noun = ident | "<" character* ">"
+
+noun = (primary_noun "'d")* primary_noun
+
+noun_list = noun 
+  | noun "ad" noun 
+  | noun "adit" noun ("," noun)+
+
+preposition = "el" | "lerj" | "fal" | "cecioj"
+
+nouns_with_case = preposition noun_list | noun_list "'c"
+
+#######################
+# verbs and sentences
+#######################
+program = (sentence ".")*
+
+sentence = procedure
+  | import
+  | var_decl
+  | predicate_decl 
+  | event_cond* "elx" "shrlo" procedure ("melx" "shrlo" procedure)*
+  | event_cond* cond "felx" "shrlo" procedure ("melx" "shrlo" procedure)*
+
+verb = ident
+mea_clause = "mea" (ident "'d")* ident "es" noun_list
+            ("mal" (ident "'d")* ident "es" noun_list)*
+procedure = verb noun nouns_with_case* mea_clause
+          | verb nouns_with_case* noun "'i" nouns_with_case* mea_clause
+
+# ここだけ 'd と ad/adit の優先順位が逆
+module = ident
+import = "lus" (module "'d")+ (
+           ident | ident "ad" ident | ident "adit" ident ("," ident)+
+         ) 
+
+var_decl = noun "es" noun
+
+predicate_decl = noun_list "'st" verb "-o" ":" cond
+
+event_cond = noun "'st" verb "-il" "io"
+
+cond = noun verb nouns_with_case* ("mal" noun verb nouns_with_case*)
