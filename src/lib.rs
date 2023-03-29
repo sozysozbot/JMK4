@@ -1,6 +1,6 @@
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 enum CharKind {
-    Alphabet,
+    AlphabetOrNumeral,
     Space,
     SimplePunctuation,
     // PossiblyTokenDivider,
@@ -8,7 +8,7 @@ enum CharKind {
 
 fn classify_char(c: char) -> CharKind {
     match c {
-        'a'..='z' | 'φ' | 'β' | 'ж' => CharKind::Alphabet,
+        'a'..='z' | 'φ' | 'β' | 'ж' | '0'..='9' => CharKind::AlphabetOrNumeral,
         c if c.is_whitespace() => CharKind::Space,
         '.' | ',' => CharKind::SimplePunctuation,
         // '\'' | '-' => CharKind::PossiblyTokenDivider,
@@ -31,11 +31,11 @@ pub fn tokenize(input: &str) -> Vec<String> {
         use CharKind::*;
         use State::*;
         match (classify_char(c), state) {
-            (Alphabet, ExpectingWordInitial) => {
+            (AlphabetOrNumeral, ExpectingWordInitial) => {
                 partial_word.push(c);
                 state = State::WordInternal;
             }
-            (Alphabet, WordInternal) => {
+            (AlphabetOrNumeral, WordInternal) => {
                 partial_word.push(c);
             }
             (Space, ExpectingWordInitial) => { /* nothing is needed */ }
@@ -63,8 +63,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
-        let result = tokenize("selsurle es iu.");
-        assert_eq!(result, vec!["selsurle", "es", "iu", "."]);
+    fn simplest() {
+        assert_eq!(
+            tokenize("selsurle es iu."),
+            vec!["selsurle", "es", "iu", "."]
+        );
+    }
+
+    #[test]
+    fn number() {
+        assert_eq!(
+            tokenize("laozia jerldir lerj 10 ad 10 el 168 ad 218."),
+            vec!["laozia", "jerldir", "lerj", "10", "ad", "10", "el", "168", "ad", "218", "."]
+        );
     }
 }
