@@ -3,7 +3,7 @@
 
 use parser::NounsWithCase;
 
-use crate::parser::{Cond, CondElem, Noun, PrimaryNoun, Sentence, State, Verb};
+use crate::parser::{Cond, CondElem, Import, Module, Noun, PrimaryNoun, Sentence, State, Verb};
 mod parser;
 mod token;
 mod tokenize;
@@ -69,6 +69,7 @@ pub fn test_nouns_with_case() {
     let tokens = token::tokenize("lerj 10 ad 10");
     let mut parser_state = State::new(&tokens);
     let noun = parser_state.parse_nouns_with_case().unwrap();
+    assert!(parser_state.is_empty());
     assert_eq!(
         noun,
         NounsWithCase {
@@ -120,6 +121,56 @@ pub fn test_cond() {
     );
 }
 
+pub fn test_import() {
+    let tokens = token::tokenize("lus jmk4'd jerldir adit kernumesaxm, deln.");
+    let mut parser_state = State::new(&tokens);
+    let import = parser_state.parse_import().unwrap();
+    assert_eq!(
+        import,
+        Import {
+            module_path: vec![Module("jmk4".to_string())],
+            idents: vec![
+                "jerldir".to_string(),
+                "kernumesaxm".to_string(),
+                "deln".to_string()
+            ]
+        }
+    );
+}
+
+pub fn test_predicate_decl() {
+    let tokens = token::tokenize(
+        "nert ad ektir'st es_tydivexy-o : ektir mol cecioj 4 ad 204 mal nert mol cecioj 24 ad 154.",
+    );
+    let mut parser_state = State::new(&tokens);
+    let predicate = parser_state.parse_predicate_decl().unwrap();
+    assert_eq!(
+        predicate,
+        Sentence::PredicateDecl {
+            noun_list: vec![noun_from_ident("nert"), noun_from_ident("ektir")],
+            verb: Verb("es_tydivexy".to_string()),
+            cond: Cond(vec![
+                CondElem {
+                    noun: noun_from_ident("ektir"),
+                    verb: Verb("mol".to_string()),
+                    nouns_with_case: Some(NounsWithCase {
+                        nouns: vec![noun_from_ident("4"), noun_from_ident("204")],
+                        case: parser::Case::Preposition(token::Preposition::Cecioj)
+                    })
+                },
+                CondElem {
+                    noun: noun_from_ident("nert"),
+                    verb: Verb("mol".to_string()),
+                    nouns_with_case: Some(NounsWithCase {
+                        nouns: vec![noun_from_ident("24"), noun_from_ident("154")],
+                        case: parser::Case::Preposition(token::Preposition::Cecioj)
+                    })
+                }
+            ])
+        }
+    );
+}
+
 #[test]
 fn parsing_primary_noun() {
     test_primary_noun();
@@ -143,4 +194,9 @@ fn parsing_nouns_with_case() {
 #[test]
 fn parsing_var_decl() {
     test_var_decl();
+}
+
+#[test]
+fn parsing_import() {
+    test_import();
 }

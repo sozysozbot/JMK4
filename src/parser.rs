@@ -60,9 +60,10 @@ pub struct Cond(pub Vec<CondElem>);
 // import = "lus" (module "'d")+ (
 //        ident | ident "ad" ident | ident "adit" ident ("," ident)+
 //      )
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Import {
-    module_path: Vec<Module>,
-    idents: Vec<String>,
+    pub module_path: Vec<Module>,
+    pub idents: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
